@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+package protobuf.scuttlebutt.nz;
+option java_package = "nz.scuttlebutt.protobuf";
+
+service SpideyServer {
+    rpc GetServerPubKey (GetServerPubKeyOptions) returns (PubKey) {
+    }
+    rpc GetCommitByAuthor (PubKey) returns (Commit) {
+    }
+    rpc GetFeedStream (GetFeedStreamOptions) returns (stream Commit) {
+    }
+    rpc GetLatest (GetLatestOptions) returns (stream LatestHash) {
+    }
+}
+
+message GetFeedStreamOptions {
+    PubKey feedKey = 1;
+    bool reverse = 2;
+    uint32 limit = 3;
+    Hash newerThanHash = 4;
+    Hash olderThanHash = 5;
+}
+
+message GetLatestOptions {
+    PubKey feedKey = 1;
+}
+
+message GetServerPubKeyOptions {
+    PubKey clientKey = 1;
+}
+
+message PubKey {
+    bytes key = 1;
+    KeyType keyType = 2;
+
+    enum KeyType {
+        ED25519 = 0;
+    }
+}
+
+message Hash {
+    bytes hash = 1;
+    HashType hashType = 2;
+
+    enum HashType {
+        SHA256 = 0;
+    }
+}
+
+message Signature {
+    bytes signature = 1;
+    SignatureType signatureType = 2;
+    enum SignatureType {
+        ED25519 = 0;
+    }
+}
+
+message LatestHash {
+    Hash hash = 1;
+    PubKey feedKey = 2;
+}
+
+
+message Commit {
+
+    Hash hash = 1;
+
+    Value value = 2;
+
+
+    message Value {
+        Content content = 1;
+        Signature signature = 2;
+
+        message Content {
+            Hash previousMessageHash = 1;
+
+            oneof content {
+                Binary binary = 2;
+                Post post = 3;
+                React react = 4;
+                Follow follow = 5;
+                SelfDescription selfDescription = 6;
+                Tag tag = 7;
+                Block block = 8;
+            }
+
+            message Action {
+              enum ActionType {
+                CREATE = 0;
+                UPDATE = 1;
+                DELETE = 2;
+                UNDELETE = 3;
+              }
+              ActionType type = 1;
+              Hash feedRef = 2;
+            }
+
+            message Binary {
+                Action action = 1;
+                bytes data = 2;
+                repeated Hash commitRefs = 3;
+                repeated PubKey feedRefs = 4;
+            }
+
+            message Post {
+                Action action = 1;
+                string text = 2;
+                repeated Hash commitRefs = 3;
+                repeated PubKey feedRefs = 4;
+            }
+
+            message React {
+                Action action = 1;
+                Hash commitRefs = 2;
+                bytes emoji = 3;
+            }
+
+            message Follow {
+                Action action = 1;
+                PubKey feedRefs = 2;
+            }
+
+            message SelfDescription {
+                Action action = 1;
+                string text = 2;
+            }
+
+            // A tag is public
+            message Tag {
+                Action action = 1;
+                string text = 2;
+                Hash commitRefs = 3;
+                bool isBookmark = 4;
+            }
+
+            message Block {
+                Action action = 1;
+                PubKey feedRefs = 2;
+                string reason = 3;
+                repeated Hash commitRefs = 4;
+            }
+
+            message ScuttlebuttJson {
+                PubKey feedRefs = 1;
+                bytes data = 2;
+            }
+        }
+    }
+}
